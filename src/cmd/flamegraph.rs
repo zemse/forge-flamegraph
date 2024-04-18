@@ -68,6 +68,7 @@ pub struct FlamegraphArgs {
     // pub test_pattern: Option<Regex>,
     #[arg(long, value_name = "TEST_FUNCTION")]
     debug: Option<Regex>,
+
     // /// Print a gas report.
     // #[arg(long, env = "FORGE_GAS_REPORT")]
     // gas_report: bool,
@@ -77,8 +78,11 @@ pub struct FlamegraphArgs {
     // allow_failure: bool,
 
     // /// Output test results in JSON format.
-    // #[arg(long, short, help_heading = "Display options")]
-    // json: bool,
+    #[arg(long, short, help_heading = "Output format")]
+    json: bool,
+
+    #[arg(long, short, help_heading = "Print entire trace")]
+    steps: bool,
 
     // /// Stop running tests after the first failure.
     // #[arg(long)]
@@ -335,15 +339,25 @@ impl FlamegraphArgs {
             }
             let mut debugger = builder.build();
 
-            println!("before try run");
             let mut acc: Vec<Acc> = vec![];
             // debugger.run_silent()?;
             debugger.try_run(&mut acc)?;
 
-            println!("after try run");
             // println!("acc {:#?}", acc);
-            process_acc(acc);
-            println!("after profess acc");
+            let top_call = process_acc(&acc);
+
+            if self.steps {
+                println!("acc_arr {:#?}", acc);
+            }
+
+            if self.json {
+                println!(
+                    "\n\nflamegraph data: {}\n\n",
+                    serde_json::to_string_pretty(&top_call).unwrap()
+                );
+            } else {
+                println!("\n\nflamegraph data: {:?}\n\n", top_call);
+            }
         }
 
         Ok(outcome)
@@ -683,9 +697,7 @@ pub fn print_call(call: &Rc<RefCell<FunctionCall>>, depth: usize, f: &mut std::f
     }
 }
 
-pub fn process_acc(acc_arr: Vec<Acc>) {
-    // println!("acc_arr {:#?}", acc_arr);
-
+pub fn process_acc(acc_arr: &Vec<Acc>) -> Rc<RefCell<FunctionCall>> {
     assert_eq!(
         acc_arr[0].current_step.total_gas_used, 0,
         "this should be the start"
@@ -817,8 +829,7 @@ pub fn process_acc(acc_arr: Vec<Acc>) {
         }
     }
 
-    println!("\n\nflamegraph data: {:?}\n\n", top_call);
-    // println!("\n\nflamegraph data: {:#?}\n\n", serde_json::to_string(&top_call));
+    top_call
 }
 
 pub fn get_contract_name_from_acc(acc: &Acc) -> Option<String> {
