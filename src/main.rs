@@ -1,12 +1,13 @@
 use clap::Parser;
 use eyre::Result;
-use foundry_cli::{handler, utils};
+use foundry_cli::{self, handler};
 use foundry_evm::inspectors::cheatcodes::{set_execution_context, ForgeContext};
 
 pub mod debugger;
 pub mod flamegraph;
 pub mod function_call;
 pub mod step;
+pub mod utils;
 
 pub mod cmd;
 
@@ -19,14 +20,14 @@ static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 fn main() -> Result<()> {
     handler::install();
-    utils::load_dotenv();
-    utils::subscriber();
-    utils::enable_paint();
+    foundry_cli::utils::load_dotenv();
+    foundry_cli::utils::subscriber();
+    foundry_cli::utils::enable_paint();
 
     let cmd = ForgeFlamegraph::parse();
     set_execution_context(ForgeContext::Test);
 
-    let outcome = utils::block_on(cmd.args.run())?;
+    let outcome = foundry_cli::utils::block_on(cmd.args.run())?;
     outcome.ensure_ok()
     // } // ForgeSubcommand::Script(cmd) => {
     //     // install the shell before executing the command

@@ -1,7 +1,10 @@
 use forge::debug::DebugStep;
 use foundry_compilers::sourcemap::SourceElement;
 
-use crate::function_call::RcRefCellFunctionCall;
+use crate::{
+    function_call::RcRefCellFunctionCall,
+    utils::{get_after_dot, get_next},
+};
 
 pub struct Step {
     pub source_element: SourceElement,
@@ -32,6 +35,27 @@ impl std::fmt::Debug for Step {
 impl std::cmp::PartialEq for Step {
     fn eq(&self, other: &Self) -> bool {
         self.source_element == other.source_element && self.source_code == other.source_code
+    }
+}
+
+impl Step {
+    pub fn get_contract_name(&self) -> Option<String> {
+        // get_name(acc)
+        get_next(&self.source_code, "contract ", vec![' ', '{'])
+            .or_else(|| get_next(&self.source_code, "abstract contract ", vec![' ', '{']))
+    }
+
+    pub fn get_function_name(&self) -> Option<String> {
+        // get_name(acc)
+        get_next(&self.source_code, "function ", vec![' ', '('])
+    }
+
+    pub fn get_name(&self) -> Option<String> {
+        get_next(&self.source_code, "contract ", vec![' ', '{'])
+            .or_else(|| get_next(&self.source_code, "abstract contract ", vec![' ', '{']))
+            .or_else(|| get_next(&self.source_code, "function ", vec![' ', '(']))
+            .or_else(|| get_after_dot(&self.source_code, vec!['(']))
+            .or_else(|| get_next(&self.source_code, "", vec!['(']))
     }
 }
 

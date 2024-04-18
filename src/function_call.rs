@@ -1,4 +1,4 @@
-use crate::step::{Step, VecStep};
+use crate::{step::VecStep, utils::get_next};
 use foundry_compilers::sourcemap::Jump;
 use serde::Serialize;
 
@@ -59,8 +59,9 @@ impl RcRefCellFunctionCall {
             acc_arr[0].current_step.total_gas_used, 0,
             "this should be the start"
         );
-        let contract_name =
-            get_contract_name_from_acc(&acc_arr[0]).expect("source code should be of contract");
+        let contract_name = acc_arr[0]
+            .get_contract_name()
+            .expect("source code should be of contract");
         let top_call = Rc::new(RefCell::new(FunctionCall {
             title: format!("{contract_name}.fallback"),
             name: contract_name,
@@ -80,8 +81,8 @@ impl RcRefCellFunctionCall {
 
             if acc.source_element.jump == Jump::In {
                 let acc_next = &acc_arr[i + 1];
-                let function_name = get_name(acc); //.expect("source code should be of function");
-                let function_name_next = get_function_name_from_acc(acc_next); //.expect("source code should be of function");
+                let function_name = acc.get_name(); //.expect("source code should be of function");
+                let function_name_next = acc_next.get_function_name(); //.expect("source code should be of function");
                 if function_name.is_none() && function_name_next.is_none() {
                     continue;
                 }
@@ -110,7 +111,7 @@ impl RcRefCellFunctionCall {
             if acc.current_step.instruction == 0xF1 || acc.current_step.instruction == 0xFA {
                 let ptr_weak = Rc::downgrade(&ptr);
                 let acc_next = &acc_arr[i + 1];
-                if let Some(contract_name) = get_contract_name_from_acc(acc_next) {
+                if let Some(contract_name) = acc_next.get_contract_name() {
                     let new_call = Rc::new(RefCell::new(FunctionCall {
                         title: format!("{contract_name}.fallback"),
                         name: contract_name,
@@ -140,7 +141,7 @@ impl RcRefCellFunctionCall {
 
             // internal function call ends
             if acc.source_element.jump == Jump::Out {
-                let name = get_name(acc).unwrap();
+                let name = acc.get_name().unwrap();
                 // let acc_next = &acc_arr[i + 1];
                 // if !acc_next.source_code.contains(&name) {
                 //     continue;
@@ -188,68 +189,4 @@ impl RcRefCellFunctionCall {
 
         RcRefCellFunctionCall(top_call)
     }
-}
-
-pub fn get_contract_name_from_acc(acc: &Step) -> Option<String> {
-    // get_name(acc)
-    get_next(&acc.source_code, "contract ", vec![' ', '{'])
-        .or_else(|| get_next(&acc.source_code, "abstract contract ", vec![' ', '{']))
-}
-
-pub fn get_function_name_from_acc(acc: &Step) -> Option<String> {
-    // get_name(acc)
-    get_next(&acc.source_code, "function ", vec![' ', '('])
-}
-
-pub fn get_name(acc: &Step) -> Option<String> {
-    get_next(&acc.source_code, "contract ", vec![' ', '{'])
-        .or_else(|| get_next(&acc.source_code, "abstract contract ", vec![' ', '{']))
-        .or_else(|| get_next(&acc.source_code, "function ", vec![' ', '(']))
-        .or_else(|| get_after_dot(&acc.source_code, vec!['(']))
-        .or_else(|| get_next(&acc.source_code, "", vec!['(']))
-}
-
-// replace these by regular expressions
-pub fn get_next(str: &str, prepend: &str, breakers: Vec<char>) -> Option<String> {
-    if str.starts_with(prepend) {
-        let start = prepend.len();
-        let mut end = start;
-        loop {
-            let nth = &str.chars().nth(end);
-            if nth.is_none() {
-                return None;
-            }
-            if breakers.contains(&nth.unwrap()) {
-                break;
-            }
-            end += 1;
-        }
-        Some(str[start..end].to_owned())
-    } else {
-        None
-    }
-}
-
-// replace these by regular expressions
-pub fn get_after_dot(str: &str, breakers: Vec<char>) -> Option<String> {
-    // cases
-    // uint256(0x0000000000000000000000000000000000000000000000000000000000000000).toField()
-    let mut start = 0;
-    let mut dot_found = false;
-    let mut end = start;
-    loop {
-        let nth = &str.chars().nth(end);
-        if nth.is_none() {
-            return None;
-        }
-        if nth.unwrap() == '.' {
-            start = end + 1;
-            dot_found = true;
-        }
-        if dot_found && breakers.contains(&nth.unwrap()) {
-            break;
-        }
-        end += 1;
-    }
-    Some(str[start..end].to_owned())
 }
