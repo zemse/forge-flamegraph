@@ -46,9 +46,21 @@ use forge::traces::render_trace_arena;
 
 foundry_config::merge_impl_figment_convert!(FlamegraphArgs, opts, evm_opts);
 
+const VERSION_MESSAGE: &str = concat!(
+    env!("CARGO_PKG_VERSION"),
+    " (",
+    env!("VERGEN_GIT_SHA"),
+    " ",
+    env!("VERGEN_BUILD_TIMESTAMP"),
+    ")"
+);
+
 /// CLI arguments for `forge test`.
 #[derive(Clone, Debug, Parser)]
-#[command(next_help_heading = "Flamegraph options")]
+#[command(
+    version = VERSION_MESSAGE,
+    next_display_order = None,
+)]
 pub struct FlamegraphArgs {
     #[arg(long, short = 't', value_name = "TEST_FUNCTION")]
     test_function: Option<Regex>,
