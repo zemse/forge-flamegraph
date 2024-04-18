@@ -62,7 +62,7 @@ pub struct VecStep(pub Vec<Step>);
 
 impl VecStep {
     pub fn parse(&self) -> RcRefCellFunctionCall {
-        RcRefCellFunctionCall::from_vec_step(self)
+        RcRefCellFunctionCall::parse_steps(self)
     }
 
     pub fn push(&mut self, step: Step) {

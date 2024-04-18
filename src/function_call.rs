@@ -53,8 +53,8 @@ fn print_call(call: &Rc<RefCell<FunctionCall>>, depth: usize, f: &mut std::fmt::
 }
 
 impl RcRefCellFunctionCall {
-    pub fn from_vec_step(vec_step: &VecStep) -> RcRefCellFunctionCall {
-        let steps = &vec_step.0;
+    pub fn parse_steps(steps: &VecStep) -> RcRefCellFunctionCall {
+        let steps = &steps.0;
         assert_eq!(
             steps[0].current_step.total_gas_used, 0,
             "this should be the start"
