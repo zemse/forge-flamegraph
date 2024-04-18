@@ -1,5 +1,6 @@
 use forge::debug::DebugStep;
 use foundry_compilers::sourcemap::SourceElement;
+use revm::interpreter::OpCode;
 
 use crate::{
     function_call::RcRefCellFunctionCall,
@@ -20,15 +21,20 @@ impl std::fmt::Debug for Step {
         } else {
             &self.source_code
         };
-        write!(
-            f,
-            "Acc {{ 
-                source_element: {:?}, 
-                source_code: {:?}, 
-                current_step: {:?} 
-            }}",
-            self.source_element, source_code, self.current_step
-        )
+
+        f.debug_struct("Step")
+            .field("source_element", &format!("{:?}", self.source_element))
+            .field("source_code", &source_code)
+            .field(
+                "current_step",
+                &format!(
+                    "DebugStep {{ instruction: {}, pc: {}, total_gas_used: {} }}",
+                    OpCode::new(self.current_step.instruction).unwrap(),
+                    self.current_step.pc,
+                    self.current_step.total_gas_used
+                ),
+            )
+            .finish()
     }
 }
 
@@ -54,6 +60,14 @@ impl Step {
             .or_else(|| get_next(&self.source_code, "function ", vec![' ', '(']))
             .or_else(|| get_after_dot(&self.source_code, vec!['(']))
             .or_else(|| get_next(&self.source_code, "", vec!['(']))
+    }
+
+    pub fn get_source_code_stripped(&self, len: usize) -> String {
+        if self.source_code.len() > len {
+            self.source_code[..len].to_string()
+        } else {
+            self.source_code.clone()
+        }
     }
 }
 

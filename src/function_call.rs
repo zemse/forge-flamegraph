@@ -9,6 +9,8 @@ struct FunctionCall {
     gas_start: u64,
     gas_end: Option<u64>,
     color: String,
+    // might be useful to resync call depth
+    is_external_call: bool,
     #[serde(rename = "children")]
     calls: Vec<Rc<RefCell<FunctionCall>>>,
     #[serde(skip)]
@@ -68,6 +70,7 @@ impl RcRefCellFunctionCall {
             gas_start: 0,
             gas_end: None,
             color: String::new(),
+            is_external_call: true,
             calls: vec![],
             parent: None,
         }));
@@ -96,10 +99,10 @@ impl RcRefCellFunctionCall {
                 let new_call = Rc::new(RefCell::new(FunctionCall {
                     title: format!("{function_name} internal jump"),
                     name: function_name,
-
                     gas_start: step.current_step.total_gas_used,
                     gas_end: None,
                     color: String::new(),
+                    is_external_call: false,
                     calls: vec![],
                     parent: Some(ptr_weak),
                 }));
@@ -118,20 +121,31 @@ impl RcRefCellFunctionCall {
                         gas_start: step.current_step.total_gas_used,
                         gas_end: None,
                         color: String::new(),
+                        is_external_call: true,
                         calls: vec![],
                         parent: Some(ptr_weak),
                     }));
                     ptr.borrow_mut().calls.push(Rc::clone(&new_call));
                     ptr = new_call;
                 } else {
-                    let function_name =
-                        get_next(&step.source_code, "", vec!['(']).expect("vm call native code");
+                    let function_name = get_next(&step.source_code, "", vec!['(']);
+                    let function_name_next = step_next.get_name();
+                    let function_name = function_name.or(function_name_next);
+                    if function_name.is_none() {
+                        println!(
+                            "no-name for native function at {:#?} \nnext step {:#?}",
+                            step, step_next
+                        );
+                        break;
+                    }
+                    let function_name = function_name.unwrap();
                     let new_call = Rc::new(RefCell::new(FunctionCall {
                         title: format!("{function_name} nativecode"),
                         name: function_name,
                         gas_start: step.current_step.total_gas_used,
                         gas_end: Some(step_next.current_step.total_gas_used),
                         color: String::new(),
+                        is_external_call: true,
                         calls: vec![],
                         parent: Some(ptr_weak),
                     }));
@@ -141,7 +155,7 @@ impl RcRefCellFunctionCall {
 
             // internal function call ends
             if step.source_element.jump == Jump::Out {
-                let name = step.get_name().unwrap();
+                let name = step.get_name().unwrap_or("unknown".to_string());
                 // let step_next = &steps[i + 1];
                 // if !step_next.source_code.contains(&name) {
                 //     continue;
@@ -156,6 +170,7 @@ impl RcRefCellFunctionCall {
                     name: "return".to_string(),
                     gas_start: 0,
                     gas_end: Some(0),
+                    is_external_call: false,
                     color: String::new(),
                     calls: vec![],
                     parent: Some(ptr_weak),
@@ -173,17 +188,42 @@ impl RcRefCellFunctionCall {
                 ptr = parent_ptr.upgrade().unwrap();
             }
 
-            // call ends
+            // external call ends
             if step.current_step.instruction == 0xF3
                 || step.current_step.instruction == 0xFD
                 || step.current_step.instruction == 0x00
             {
-                let parent_ptr = Weak::clone(ptr.borrow_mut().parent.as_ref().unwrap());
+                loop {
+                    let parent_ptr = Weak::clone(ptr.borrow_mut().parent.as_ref().unwrap());
 
-                let step_next = &steps[i + 1];
-                ptr.borrow_mut().gas_end = Some(step_next.current_step.total_gas_used);
+                    let step_next = &steps[i + 1];
+                    ptr.borrow_mut().gas_end = Some(step_next.current_step.total_gas_used);
 
-                ptr = parent_ptr.upgrade().unwrap();
+                    let prev_ptr = ptr;
+                    ptr = parent_ptr.upgrade().unwrap();
+
+                    if prev_ptr.borrow_mut().is_external_call {
+                        let ptr_weak = Rc::downgrade(&ptr);
+                        let name = step
+                            .get_name()
+                            .unwrap_or_else(|| step.get_source_code_stripped(30));
+                        let return_dummy_call = Rc::new(RefCell::new(FunctionCall {
+                            title: format!(
+                                "returncall {name} pc: {}, total_gas_used: {}",
+                                step.current_step.pc, step.current_step.total_gas_used
+                            ),
+                            name: "return".to_string(),
+                            gas_start: 0,
+                            gas_end: Some(0),
+                            is_external_call: false,
+                            color: String::new(),
+                            calls: vec![],
+                            parent: Some(ptr_weak),
+                        }));
+                        ptr.borrow_mut().calls.push(return_dummy_call);
+                        break;
+                    }
+                }
             }
         }
 
