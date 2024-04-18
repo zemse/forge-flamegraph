@@ -66,8 +66,8 @@ foundry_config::merge_impl_figment_convert!(FlamegraphArgs, opts, evm_opts);
 pub struct FlamegraphArgs {
     // #[arg(long = "match-test", visible_alias = "mt", value_name = "REGEX")]
     // pub test_pattern: Option<Regex>,
-    #[arg(long, value_name = "TEST_FUNCTION")]
-    debug: Option<Regex>,
+    #[arg(long, short = 't', value_name = "TEST_FUNCTION")]
+    test_function: Option<Regex>,
 
     // /// Print a gas report.
     // #[arg(long, env = "FORGE_GAS_REPORT")]
@@ -267,7 +267,7 @@ impl FlamegraphArgs {
         let env = evm_opts.evm_env().await?;
 
         // Prepare the test builder
-        let should_debug = self.debug.is_some();
+        let should_debug = self.test_function.is_some();
 
         // Clone the output only if we actually need it later for the debugger.
         let output_clone = should_debug.then(|| output.clone());
@@ -291,7 +291,7 @@ impl FlamegraphArgs {
             .enable_isolation(evm_opts.isolate)
             .build(project_root, output, env, evm_opts)?;
 
-        if let Some(debug_test_pattern) = &self.debug {
+        if let Some(debug_test_pattern) = &self.test_function {
             let test_pattern = &mut filter.args_mut().test_pattern;
             if test_pattern.is_some() {
                 eyre::bail!(

@@ -1,4 +1,4 @@
-use crate::cmd::flamegraph;
+use crate::cmd::flamegraph::{self, FlamegraphArgs};
 use clap::{Parser, Subcommand, ValueHint};
 // use forge_script::ScriptArgs;
 // use forge_verify::{bytecode::VerifyBytecodeArgs, VerifyArgs, VerifyCheckArgs};
@@ -20,24 +20,7 @@ const VERSION_MESSAGE: &str = concat!(
     after_help = "Find more information in the book: http://book.getfoundry.sh/reference/forge/forge.html",
     next_display_order = None,
 )]
-pub struct Forge {
-    #[command(subcommand)]
-    pub cmd: ForgeSubcommand,
-}
-
-#[derive(Subcommand)]
-#[allow(clippy::large_enum_variant)]
-pub enum ForgeSubcommand {
-    Flamegraph(flamegraph::FlamegraphArgs),
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use clap::CommandFactory;
-
-    #[test]
-    fn verify_cli() {
-        Forge::command().debug_assert();
-    }
+pub struct ForgeFlamegraph {
+    #[command(flatten)]
+    pub args: FlamegraphArgs,
 }
