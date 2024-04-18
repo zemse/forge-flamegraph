@@ -4,3 +4,33 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+alloy-primitives = { version = "0.7.0", features = ["getrandom"] }
+eyre = "0.6"
+revm = { version = "8", default-features = false }
+forge = { git = "https://github.com/foundry-rs/foundry", rev = "43587e2b", default-features = false }
+foundry-common = { git = "https://github.com/foundry-rs/foundry", rev = "43587e2b", default-features = false }
+foundry-evm-core = { git = "https://github.com/foundry-rs/foundry", rev = "43587e2b", default-features = false }
+foundry-evm-traces = { git = "https://github.com/foundry-rs/foundry", rev = "43587e2b", default-features = false }
+foundry-cli = { git = "https://github.com/foundry-rs/foundry", rev = "43587e2b", default-features = false }
+foundry-config = { git = "https://github.com/foundry-rs/foundry", rev = "43587e2b", default-features = false }
+foundry-evm = { git = "https://github.com/foundry-rs/foundry", rev = "43587e2b", default-features = false }
+
+foundry-compilers = { version = "0.3.14", default-features = false }
+
+revm-inspectors = { git = "https://github.com/paradigmxyz/evm-inspectors", rev = "413b892", features = [
+    "serde",
+] } 
+
+# misc
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["arbitrary_precision"] }
+clap = { version = "4", features = ["derive", "env", "unicode", "wrap_help"] }
+regex = { version = "1", default-features = false }
+tracing = "0.1"
+tokio = { version = "1", features = ["time"] }
+yansi = "0.5"
+semver = "1"
+once_cell = "1"
+
+[build-dependencies]
+vergen = { version = "8", default-features = false }
