@@ -78,17 +78,17 @@ impl Debugger {
     // }
 
     /// Starts the debugger TUI.
-    pub fn try_run(&mut self, acc: &mut VecStep) -> Result<ExitReason> {
+    pub fn try_run(&mut self, steps: &mut VecStep) -> Result<ExitReason> {
         eyre::ensure!(!self.debug_arena.is_empty(), "debug arena is empty");
-        self.try_run_real(acc)
+        self.try_run_real(steps)
     }
 
-    fn try_run_real(&mut self, acc: &mut VecStep) -> Result<ExitReason> {
+    fn try_run_real(&mut self, steps: &mut VecStep) -> Result<ExitReason> {
         // Create the context.
         let mut cx = DebuggerContext::new(self);
 
         cx.init();
-        cx.draw(acc)?;
+        cx.draw(steps)?;
 
         // Start the event loop.
         loop {
@@ -100,7 +100,7 @@ impl Debugger {
                 return Ok(ExitReason::CharExit);
             }
 
-            cx.draw(acc)?;
+            cx.draw(steps)?;
         }
     }
 }

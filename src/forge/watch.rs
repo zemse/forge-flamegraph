@@ -69,7 +69,11 @@ impl WatchArgs {
         let mut runtime = runtime(self)?;
 
         // contains all the arguments `--watch p1, p2, p3`
-        let has_paths = self.watch.as_ref().map(|paths| !paths.is_empty()).unwrap_or_default();
+        let has_paths = self
+            .watch
+            .as_ref()
+            .map(|paths| !paths.is_empty())
+            .unwrap_or_default();
 
         if !has_paths {
             // use alternative pathset, but only those that exists
@@ -83,7 +87,13 @@ impl WatchArgs {
 /// build`
 pub async fn watch_build(args: BuildArgs) -> Result<()> {
     let (init, mut runtime) = args.watchexec_config()?;
-    let cmd = cmd_args(args.watch.watch.as_ref().map(|paths| paths.len()).unwrap_or_default());
+    let cmd = cmd_args(
+        args.watch
+            .watch
+            .as_ref()
+            .map(|paths| paths.len())
+            .unwrap_or_default(),
+    );
 
     trace!("watch build cmd={:?}", cmd);
     runtime.command(watch_command(cmd.clone()));
@@ -102,13 +112,27 @@ pub async fn watch_build(args: BuildArgs) -> Result<()> {
 /// snapshot`
 pub async fn watch_snapshot(args: SnapshotArgs) -> Result<()> {
     let (init, mut runtime) = args.watchexec_config()?;
-    let cmd = cmd_args(args.test.watch.watch.as_ref().map(|paths| paths.len()).unwrap_or_default());
+    let cmd = cmd_args(
+        args.test
+            .watch
+            .watch
+            .as_ref()
+            .map(|paths| paths.len())
+            .unwrap_or_default(),
+    );
 
     trace!("watch snapshot cmd={:?}", cmd);
     runtime.command(watch_command(cmd.clone()));
     let wx = Watchexec::new(init, runtime.clone())?;
 
-    on_action(args.test.watch.clone(), runtime, Arc::clone(&wx), cmd, (), |_| {});
+    on_action(
+        args.test.watch.clone(),
+        runtime,
+        Arc::clone(&wx),
+        cmd,
+        (),
+        |_| {},
+    );
 
     // start executing the command immediately
     wx.send_event(Event::default(), Priority::default()).await?;
@@ -121,7 +145,13 @@ pub async fn watch_snapshot(args: SnapshotArgs) -> Result<()> {
 /// test`
 pub async fn watch_test(args: TestArgs) -> Result<()> {
     let (init, mut runtime) = args.watchexec_config()?;
-    let cmd = cmd_args(args.watch.watch.as_ref().map(|paths| paths.len()).unwrap_or_default());
+    let cmd = cmd_args(
+        args.watch
+            .watch
+            .as_ref()
+            .map(|paths| paths.len())
+            .unwrap_or_default(),
+    );
     trace!("watch test cmd={:?}", cmd);
     runtime.command(watch_command(cmd.clone()));
     let wx = Watchexec::new(init, runtime.clone())?;
@@ -131,17 +161,24 @@ pub async fn watch_test(args: TestArgs) -> Result<()> {
     let filter = args.filter(&config);
 
     // marker to check whether to override the command
-    let no_reconfigure = filter.args().test_pattern.is_some() ||
-        filter.args().path_pattern.is_some() ||
-        filter.args().contract_pattern.is_some() ||
-        args.watch.run_all;
+    let no_reconfigure = filter.args().test_pattern.is_some()
+        || filter.args().path_pattern.is_some()
+        || filter.args().contract_pattern.is_some()
+        || args.watch.run_all;
 
     let state = WatchTestState {
         project_root: config.__root.0,
         no_reconfigure,
         last_test_files: Default::default(),
     };
-    on_action(args.watch.clone(), runtime, Arc::clone(&wx), cmd, state, on_test);
+    on_action(
+        args.watch.clone(),
+        runtime,
+        Arc::clone(&wx),
+        cmd,
+        state,
+        on_test,
+    );
 
     // start executing the command immediately
     wx.send_event(Event::default(), Priority::default()).await?;
@@ -164,12 +201,23 @@ struct WatchTestState {
 
 /// The `on_action` hook for `forge test --watch`
 fn on_test(action: OnActionState<WatchTestState>) {
-    let OnActionState { args, runtime, action, wx, cmd, other } = action;
-    let WatchTestState { project_root, no_reconfigure, last_test_files } = other;
+    let OnActionState {
+        args,
+        runtime,
+        action,
+        wx,
+        cmd,
+        other,
+    } = action;
+    let WatchTestState {
+        project_root,
+        no_reconfigure,
+        last_test_files,
+    } = other;
 
     if no_reconfigure {
         // nothing to reconfigure
-        return
+        return;
     }
 
     let mut cmd = cmd.clone();
@@ -184,13 +232,16 @@ fn on_test(action: OnActionState<WatchTestState>) {
         .collect();
 
     // replace `--match-path` | `-mp` argument
-    if let Some(pos) = cmd.iter().position(|arg| arg == "--match-path" || arg == "-mp") {
+    if let Some(pos) = cmd
+        .iter()
+        .position(|arg| arg == "--match-path" || arg == "-mp")
+    {
         // --match-path requires 1 argument
         cmd.drain(pos..=(pos + 1));
     }
 
-    if changed_sol_test_files.len() > 1 ||
-        (changed_sol_test_files.is_empty() && last_test_files.is_empty())
+    if changed_sol_test_files.len() > 1
+        || (changed_sol_test_files.is_empty() && last_test_files.is_empty())
     {
         // this could happen if multiple files were changed at once, for example `forge fmt` was
         // run, or if no test files were changed and no previous test files were modified in which
@@ -210,7 +261,7 @@ fn on_test(action: OnActionState<WatchTestState>) {
             },
             on_test,
         );
-        return
+        return;
     }
 
     if changed_sol_test_files.is_empty() {
@@ -219,7 +270,11 @@ fn on_test(action: OnActionState<WatchTestState>) {
     }
 
     // append `--match-path` glob
-    let mut file = changed_sol_test_files.clone().into_iter().next().expect("test file present");
+    let mut file = changed_sol_test_files
+        .clone()
+        .into_iter()
+        .next()
+        .expect("test file present");
 
     // remove the project root dir from the detected file
     if let Some(root) = project_root.as_os_str().to_str() {
@@ -243,7 +298,11 @@ fn on_test(action: OnActionState<WatchTestState>) {
         config,
         wx,
         cmd,
-        WatchTestState { project_root, no_reconfigure, last_test_files: changed_sol_test_files },
+        WatchTestState {
+            project_root,
+            no_reconfigure,
+            last_test_files: changed_sol_test_files,
+        },
         on_test,
     );
 }
@@ -267,7 +326,10 @@ fn cmd_args(num: usize) -> Vec<String> {
 
 #[instrument(level = "debug", ret)]
 fn clean_cmd_args(num: usize, mut cmd_args: Vec<String>) -> Vec<String> {
-    if let Some(pos) = cmd_args.iter().position(|arg| arg == "--watch" || arg == "-w") {
+    if let Some(pos) = cmd_args
+        .iter()
+        .position(|arg| arg == "--watch" || arg == "-w")
+    {
         cmd_args.drain(pos..=(pos + num));
     }
 
@@ -278,11 +340,11 @@ fn clean_cmd_args(num: usize, mut cmd_args: Vec<String>) -> Vec<String> {
         fn contains_w_in_short(arg: &str) -> Option<bool> {
             let mut iter = arg.chars().peekable();
             if *iter.peek()? != '-' {
-                return None
+                return None;
             }
             iter.next();
             if *iter.peek()? == '-' {
-                return None
+                return None;
             }
             Some(iter.any(|c| c == 'w'))
         }
@@ -337,17 +399,26 @@ fn on_action<F, T>(
     F: for<'a> Fn(OnActionState<'a, T>) + Send + 'static,
     T: Clone + Send + 'static,
 {
-    let on_busy = if args.no_restart { "do-nothing" } else { "restart" };
+    let on_busy = if args.no_restart {
+        "do-nothing"
+    } else {
+        "restart"
+    };
     let runtime = config.clone();
     let w = Arc::clone(&wx);
     config.on_action(move |action: Action| {
         let fut = async { Ok::<(), Infallible>(()) };
         let signals: Vec<MainSignal> = action.events.iter().flat_map(|e| e.signals()).collect();
-        let has_paths = action.events.iter().flat_map(|e| e.paths()).next().is_some();
+        let has_paths = action
+            .events
+            .iter()
+            .flat_map(|e| e.paths())
+            .next()
+            .is_some();
 
         if signals.contains(&MainSignal::Terminate) || signals.contains(&MainSignal::Interrupt) {
             action.outcome(Outcome::both(Outcome::Stop, Outcome::Exit));
-            return fut
+            return fut;
         }
 
         if !has_paths {
@@ -358,7 +429,7 @@ fn on_action<F, T>(
                 }
 
                 action.outcome(out);
-                return fut
+                return fut;
             }
 
             let completion = action.events.iter().flat_map(|e| e.completions()).next();
@@ -382,7 +453,7 @@ fn on_action<F, T>(
                 };
 
                 action.outcome(Outcome::DoNothing);
-                return fut
+                return fut;
             }
         }
 
@@ -406,8 +477,11 @@ fn on_action<F, T>(
             _ => Outcome::DoNothing,
         };
 
-        let when_idle =
-            if clear { Outcome::both(Outcome::Clear, Outcome::Start) } else { Outcome::Start };
+        let when_idle = if clear {
+            Outcome::both(Outcome::Clear, Outcome::Start)
+        } else {
+            Outcome::Start
+        };
 
         action.outcome(Outcome::if_running(when_running, when_idle));
 

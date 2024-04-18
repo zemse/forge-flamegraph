@@ -40,13 +40,11 @@ impl std::cmp::PartialEq for Step {
 
 impl Step {
     pub fn get_contract_name(&self) -> Option<String> {
-        // get_name(acc)
         get_next(&self.source_code, "contract ", vec![' ', '{'])
             .or_else(|| get_next(&self.source_code, "abstract contract ", vec![' ', '{']))
     }
 
     pub fn get_function_name(&self) -> Option<String> {
-        // get_name(acc)
         get_next(&self.source_code, "function ", vec![' ', '('])
     }
 
@@ -63,7 +61,7 @@ impl Step {
 pub struct VecStep(pub Vec<Step>);
 
 impl VecStep {
-    pub fn into_call_tree(&self) -> RcRefCellFunctionCall {
+    pub fn parse(&self) -> RcRefCellFunctionCall {
         RcRefCellFunctionCall::from_vec_step(self)
     }
 

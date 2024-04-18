@@ -54,12 +54,12 @@ fn print_call(call: &Rc<RefCell<FunctionCall>>, depth: usize, f: &mut std::fmt::
 
 impl RcRefCellFunctionCall {
     pub fn from_vec_step(vec_step: &VecStep) -> RcRefCellFunctionCall {
-        let acc_arr = &vec_step.0;
+        let steps = &vec_step.0;
         assert_eq!(
-            acc_arr[0].current_step.total_gas_used, 0,
+            steps[0].current_step.total_gas_used, 0,
             "this should be the start"
         );
-        let contract_name = acc_arr[0]
+        let contract_name = steps[0]
             .get_contract_name()
             .expect("source code should be of contract");
         let top_call = Rc::new(RefCell::new(FunctionCall {
@@ -73,16 +73,16 @@ impl RcRefCellFunctionCall {
         }));
         let mut ptr = Rc::clone(&top_call);
 
-        for (i, acc) in acc_arr.iter().enumerate() {
+        for (i, step) in steps.iter().enumerate() {
             if i == 0 {
                 // we have handled the first one already
                 continue;
             }
 
-            if acc.source_element.jump == Jump::In {
-                let acc_next = &acc_arr[i + 1];
-                let function_name = acc.get_name(); //.expect("source code should be of function");
-                let function_name_next = acc_next.get_function_name(); //.expect("source code should be of function");
+            if step.source_element.jump == Jump::In {
+                let step_next = &steps[i + 1];
+                let function_name = step.get_name(); //.expect("source code should be of function");
+                let function_name_next = step_next.get_function_name(); //.expect("source code should be of function");
                 if function_name.is_none() && function_name_next.is_none() {
                     continue;
                 }
@@ -97,7 +97,7 @@ impl RcRefCellFunctionCall {
                     title: format!("{function_name} internal jump"),
                     name: function_name,
 
-                    gas_start: acc.current_step.total_gas_used,
+                    gas_start: step.current_step.total_gas_used,
                     gas_end: None,
                     color: String::new(),
                     calls: vec![],
@@ -108,14 +108,14 @@ impl RcRefCellFunctionCall {
             }
 
             // CALL or STATICCALL
-            if acc.current_step.instruction == 0xF1 || acc.current_step.instruction == 0xFA {
+            if step.current_step.instruction == 0xF1 || step.current_step.instruction == 0xFA {
                 let ptr_weak = Rc::downgrade(&ptr);
-                let acc_next = &acc_arr[i + 1];
-                if let Some(contract_name) = acc_next.get_contract_name() {
+                let step_next = &steps[i + 1];
+                if let Some(contract_name) = step_next.get_contract_name() {
                     let new_call = Rc::new(RefCell::new(FunctionCall {
                         title: format!("{contract_name}.fallback"),
                         name: contract_name,
-                        gas_start: acc.current_step.total_gas_used,
+                        gas_start: step.current_step.total_gas_used,
                         gas_end: None,
                         color: String::new(),
                         calls: vec![],
@@ -125,12 +125,12 @@ impl RcRefCellFunctionCall {
                     ptr = new_call;
                 } else {
                     let function_name =
-                        get_next(&acc.source_code, "", vec!['(']).expect("vm call native code");
+                        get_next(&step.source_code, "", vec!['(']).expect("vm call native code");
                     let new_call = Rc::new(RefCell::new(FunctionCall {
                         title: format!("{function_name} nativecode"),
                         name: function_name,
-                        gas_start: acc.current_step.total_gas_used,
-                        gas_end: Some(acc_next.current_step.total_gas_used),
+                        gas_start: step.current_step.total_gas_used,
+                        gas_end: Some(step_next.current_step.total_gas_used),
                         color: String::new(),
                         calls: vec![],
                         parent: Some(ptr_weak),
@@ -140,10 +140,10 @@ impl RcRefCellFunctionCall {
             }
 
             // internal function call ends
-            if acc.source_element.jump == Jump::Out {
-                let name = acc.get_name().unwrap();
-                // let acc_next = &acc_arr[i + 1];
-                // if !acc_next.source_code.contains(&name) {
+            if step.source_element.jump == Jump::Out {
+                let name = step.get_name().unwrap();
+                // let step_next = &steps[i + 1];
+                // if !step_next.source_code.contains(&name) {
                 //     continue;
                 // }
 
@@ -151,7 +151,7 @@ impl RcRefCellFunctionCall {
                 let return_dummy_call = Rc::new(RefCell::new(FunctionCall {
                     title: format!(
                         "return {name} pc: {}, total_gas_used: {}",
-                        acc.current_step.pc, acc.current_step.total_gas_used
+                        step.current_step.pc, step.current_step.total_gas_used
                     ),
                     name: "return".to_string(),
                     gas_start: 0,
@@ -164,24 +164,24 @@ impl RcRefCellFunctionCall {
                 let parent_ptr = if let Some(ptr) = ptr.borrow_mut().parent.as_ref() {
                     Weak::clone(ptr)
                 } else {
-                    println!("no parent found for {}", acc.source_code);
+                    println!("no parent found for {}", step.source_code);
                     break;
                 };
 
-                ptr.borrow_mut().gas_end = Some(acc.current_step.total_gas_used);
+                ptr.borrow_mut().gas_end = Some(step.current_step.total_gas_used);
 
                 ptr = parent_ptr.upgrade().unwrap();
             }
 
             // call ends
-            if acc.current_step.instruction == 0xF3
-                || acc.current_step.instruction == 0xFD
-                || acc.current_step.instruction == 0x00
+            if step.current_step.instruction == 0xF3
+                || step.current_step.instruction == 0xFD
+                || step.current_step.instruction == 0x00
             {
                 let parent_ptr = Weak::clone(ptr.borrow_mut().parent.as_ref().unwrap());
 
-                let acc_next = &acc_arr[i + 1];
-                ptr.borrow_mut().gas_end = Some(acc_next.current_step.total_gas_used);
+                let step_next = &steps[i + 1];
+                ptr.borrow_mut().gas_end = Some(step_next.current_step.total_gas_used);
 
                 ptr = parent_ptr.upgrade().unwrap();
             }

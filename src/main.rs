@@ -9,7 +9,7 @@ pub mod function_call;
 pub mod step;
 pub mod utils;
 
-pub mod cmd;
+pub mod forge;
 
 pub mod opts;
 use opts::ForgeFlamegraph;

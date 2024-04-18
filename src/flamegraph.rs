@@ -1,6 +1,6 @@
 // use super::watch::WatchArgs;
 
-use super::{cmd::install, cmd::test::ProjectPathsAwareFilter};
+use super::{forge::install, forge::test::ProjectPathsAwareFilter};
 use crate::{debugger::Debugger, step::VecStep};
 use clap::Parser;
 use eyre::Result;
@@ -41,7 +41,7 @@ use tracing::trace;
 // use watchexec::config::{InitConfig, RuntimeConfig};
 use yansi::Paint;
 
-pub use crate::cmd::test::FilterArgs;
+pub use crate::forge::test::FilterArgs;
 use forge::traces::render_trace_arena;
 
 foundry_config::merge_impl_figment_convert!(FlamegraphArgs, opts, evm_opts);
@@ -280,15 +280,14 @@ impl FlamegraphArgs {
             }
             let mut debugger = builder.build();
 
-            let mut acc = VecStep::default();
+            let mut steps = VecStep::default();
             // debugger.run_silent()?;
-            debugger.try_run(&mut acc)?;
+            debugger.try_run(&mut steps)?;
 
-            // println!("acc {:#?}", acc);
-            let top_call = acc.into_call_tree();
+            let top_call = steps.parse();
 
             if self.steps {
-                println!("acc_arr {:#?}", acc);
+                println!("steps {:#?}", steps);
             }
 
             if self.json {

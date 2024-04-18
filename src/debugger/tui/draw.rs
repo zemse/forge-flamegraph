@@ -6,25 +6,25 @@ use std::io;
 
 impl DebuggerContext<'_> {
     /// Draws the TUI layout and subcomponents to the given terminal.
-    pub(crate) fn draw(&self, acc: &mut VecStep) -> io::Result<()> {
-        self.draw_layout(acc);
+    pub(crate) fn draw(&self, steps: &mut VecStep) -> io::Result<()> {
+        self.draw_layout(steps);
         Ok(())
     }
 
     #[inline]
-    fn draw_layout(&self, acc: &mut VecStep) {
-        self.horizontal_layout(acc);
+    fn draw_layout(&self, steps: &mut VecStep) {
+        self.horizontal_layout(steps);
     }
 
-    fn horizontal_layout(&self, acc: &mut VecStep) {
-        self.draw_src(acc);
+    fn horizontal_layout(&self, steps: &mut VecStep) {
+        self.draw_src(steps);
     }
 
-    fn draw_src(&self, acc: &mut VecStep) {
-        self.src_text(acc);
+    fn draw_src(&self, steps: &mut VecStep) {
+        self.src_text(steps);
     }
 
-    fn src_text(&self, acc: &mut VecStep) {
+    fn src_text(&self, steps: &mut VecStep) {
         let (source_element, source_code) = match self.src_map() {
             Ok(r) => r,
             Err(_) => return,
@@ -38,12 +38,12 @@ impl DebuggerContext<'_> {
         let actual_start = offset.min(max);
         let actual_end = (offset + len).min(max);
 
-        let new_acc = Step {
+        let new_step = Step {
             source_element: source_element.clone(),
             source_code: source_code[actual_start..actual_end].to_string(),
             current_step: self.current_step().clone(),
         };
-        acc.push(new_acc);
+        steps.push(new_step);
     }
 
     fn src_map(&self) -> Result<(SourceElement, &str), String> {
