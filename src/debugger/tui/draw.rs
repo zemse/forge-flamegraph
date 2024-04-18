@@ -1,62 +1,30 @@
 use super::context::DebuggerContext;
+use crate::step::{Step, VecStep};
 use foundry_compilers::sourcemap::SourceElement;
-use foundry_evm_core::debug::DebugStep;
 use revm_inspectors::tracing::types::CallKind;
 use std::io;
 
-pub struct Acc {
-    pub source_element: SourceElement,
-    pub source_code: String,
-    pub current_step: DebugStep,
-}
-
-impl std::fmt::Debug for Acc {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let max = 90;
-        let source_code = if self.source_code.len() > max {
-            &self.source_code[..max]
-        } else {
-            &self.source_code
-        };
-        write!(
-            f,
-            "Acc {{ 
-                source_element: {:?}, 
-                source_code: {:?}, 
-                current_step: {:?} 
-            }}",
-            self.source_element, source_code, self.current_step
-        )
-    }
-}
-
-impl std::cmp::PartialEq for Acc {
-    fn eq(&self, other: &Self) -> bool {
-        self.source_element == other.source_element && self.source_code == other.source_code
-    }
-}
-
 impl DebuggerContext<'_> {
     /// Draws the TUI layout and subcomponents to the given terminal.
-    pub(crate) fn draw(&self, acc: &mut Vec<Acc>) -> io::Result<()> {
+    pub(crate) fn draw(&self, acc: &mut VecStep) -> io::Result<()> {
         self.draw_layout(acc);
         Ok(())
     }
 
     #[inline]
-    fn draw_layout(&self, acc: &mut Vec<Acc>) {
+    fn draw_layout(&self, acc: &mut VecStep) {
         self.horizontal_layout(acc);
     }
 
-    fn horizontal_layout(&self, acc: &mut Vec<Acc>) {
+    fn horizontal_layout(&self, acc: &mut VecStep) {
         self.draw_src(acc);
     }
 
-    fn draw_src(&self, acc: &mut Vec<Acc>) {
+    fn draw_src(&self, acc: &mut VecStep) {
         self.src_text(acc);
     }
 
-    fn src_text(&self, acc: &mut Vec<Acc>) {
+    fn src_text(&self, acc: &mut VecStep) {
         let (source_element, source_code) = match self.src_map() {
             Ok(r) => r,
             Err(_) => return,
@@ -70,7 +38,7 @@ impl DebuggerContext<'_> {
         let actual_start = offset.min(max);
         let actual_end = (offset + len).min(max);
 
-        let new_acc = Acc {
+        let new_acc = Step {
             source_element: source_element.clone(),
             source_code: source_code[actual_start..actual_end].to_string(),
             current_step: self.current_step().clone(),

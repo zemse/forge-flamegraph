@@ -5,6 +5,8 @@ use foundry_evm::inspectors::cheatcodes::{set_execution_context, ForgeContext};
 
 pub mod debugger;
 pub mod flamegraph;
+pub mod function_call;
+pub mod step;
 
 pub mod cmd;
 

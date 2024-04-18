@@ -3,4 +3,4 @@
 pub mod op;
 
 mod tui;
-pub use tui::{Acc, Debugger, DebuggerBuilder, ExitReason};
+pub use tui::{Debugger, DebuggerBuilder, ExitReason};
