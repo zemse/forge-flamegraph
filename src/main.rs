@@ -1,18 +1,12 @@
-// #[macro_use]
-// extern crate tracing;
-
-use std::process::{Command, Stdio};
-
-use clap::{CommandFactory, Parser};
-// use clap_complete::generate;
+use clap::Parser;
 use eyre::Result;
 use foundry_cli::{handler, utils};
 use foundry_evm::inspectors::cheatcodes::{set_execution_context, ForgeContext};
 
 pub mod debugger;
+pub mod flamegraph;
 
 pub mod cmd;
-// use cmd::{cache::CacheSubcommands, generate::GenerateSubcommands};
 
 pub mod opts;
 use opts::ForgeFlamegraph;

@@ -94,8 +94,8 @@ impl DebuggerBuilder {
             debug_arena,
             identified_contracts,
             sources,
-            breakpoints,
+            ..
         } = self;
-        Debugger::new(debug_arena, identified_contracts, sources, breakpoints)
+        Debugger::new(debug_arena, identified_contracts, sources)
     }
 }

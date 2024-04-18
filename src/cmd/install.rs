@@ -1,12 +1,12 @@
-use clap::{Parser, ValueHint};
+use clap::Parser;
 use eyre::{Context, Result};
 use foundry_cli::{
     opts::Dependency,
     p_println, prompt,
-    utils::{CommandUtils, Git, LoadConfig},
+    utils::{CommandUtils, Git},
 };
 use foundry_common::fs;
-use foundry_config::{impl_figment_convert_basic, Config};
+use foundry_config::Config;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use semver::Version;
@@ -20,48 +20,6 @@ use yansi::Paint;
 
 static DEPENDENCY_VERSION_TAG_REGEX: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^v?\d+(\.\d+)*$").unwrap());
-
-/// CLI arguments for `forge install`.
-#[derive(Clone, Debug, Parser)]
-#[command(override_usage = "forge install [OPTIONS] [DEPENDENCIES]...
-    forge install [OPTIONS] <github username>/<github project>@<tag>...
-    forge install [OPTIONS] <alias>=<github username>/<github project>@<tag>...
-    forge install [OPTIONS] <https:// git url>...")]
-pub struct InstallArgs {
-    /// The dependencies to install.
-    ///
-    /// A dependency can be a raw URL, or the path to a GitHub repository.
-    ///
-    /// Additionally, a ref can be provided by adding @ to the dependency path.
-    ///
-    /// A ref can be:
-    /// - A branch: master
-    /// - A tag: v1.2.3
-    /// - A commit: 8e8128
-    ///
-    /// Target installation directory can be added via `<alias>=` suffix.
-    /// The dependency will installed to `lib/<alias>`.
-    dependencies: Vec<Dependency>,
-
-    /// The project's root path.
-    ///
-    /// By default root of the Git repository, if in one,
-    /// or the current working directory.
-    #[arg(long, value_hint = ValueHint::DirPath, value_name = "PATH")]
-    pub root: Option<PathBuf>,
-
-    #[command(flatten)]
-    opts: DependencyInstallOpts,
-}
-
-impl_figment_convert_basic!(InstallArgs);
-
-impl InstallArgs {
-    pub fn run(self) -> Result<()> {
-        let mut config = self.try_load_config_emit_warnings()?;
-        self.opts.install(&mut config, self.dependencies)
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default, Parser)]
 pub struct DependencyInstallOpts {

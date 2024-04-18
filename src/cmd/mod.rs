@@ -47,7 +47,6 @@
 // pub mod create;
 // pub mod debug;
 // pub mod doc;
-pub mod flamegraph;
 // pub mod flatten;
 // pub mod fmt;
 // pub mod geiger;

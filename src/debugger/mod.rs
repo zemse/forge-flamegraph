@@ -1,11 +1,4 @@
-//! # foundry-debugger
-//!
-//! Interactive Solidity TUI debugger.
-
-#![warn(unused_crate_dependencies, unreachable_pub)]
-
-// #[macro_use]
-// extern crate tracing;
+#![warn(unreachable_pub)]
 
 pub mod op;
 
