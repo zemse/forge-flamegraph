@@ -67,11 +67,8 @@ pub struct FlamegraphArgs {
     #[arg(long, short, help_heading = "Internal functions")]
     debugtrace: bool,
 
-    #[arg(long, short, help_heading = "Output format")]
-    json: bool,
-
-    #[arg(long, short, help_heading = "Print entire trace")]
-    steps: bool,
+    #[arg(long, short, help_heading = "Open flamegraph in default program")]
+    open: bool,
 
     #[command(flatten)]
     evm_opts: EvmArgs,
@@ -337,11 +334,16 @@ impl FlamegraphArgs {
 
         // println!("flamegraph: {:#?}", flamegraph.folded_stack_lines);
 
-        flamegraph.generate(format!(
+        let file_name = format!(
             "flamegraph_{}_{}.svg",
             test_name,
             if should_debug { "debug" } else { "calltrace" }
-        ));
+        );
+
+        flamegraph.generate(&file_name);
+        if self.open {
+            open::that(file_name)?;
+        }
 
         Ok(outcome)
     }
