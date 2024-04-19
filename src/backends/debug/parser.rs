@@ -4,6 +4,7 @@ use forge::result::TestResult;
 use foundry_common::compile::ContractSources;
 use foundry_compilers::sourcemap::Jump;
 use foundry_evm_traces::CallTraceDecoder;
+use revm::interpreter::OpCode;
 use std::{
     cell::RefCell,
     rc::{Rc, Weak},
@@ -133,6 +134,25 @@ pub fn parse_steps(steps: &VecStep) -> Rc<RefCell<FunctionCall>> {
             }));
             ptr.borrow_mut().calls.push(Rc::clone(&new_call));
             ptr = new_call;
+        }
+
+        {
+            let ptr_weak = Rc::downgrade(&ptr);
+            let step_next = &steps.get(i + 1);
+            let opcode = OpCode::new(step.current_step.instruction)
+                .unwrap()
+                .to_string();
+            let new_call = Rc::new(RefCell::new(FunctionCall {
+                title: opcode.clone(),
+                name: opcode,
+                gas_start: step.current_step.total_gas_used,
+                gas_end: step_next.map(|step_next| step_next.current_step.total_gas_used),
+                color: String::new(),
+                is_external_call: false,
+                calls: vec![],
+                parent: Some(ptr_weak),
+            }));
+            ptr.borrow_mut().calls.push(Rc::clone(&new_call));
         }
 
         // CALL or STATICCALL
