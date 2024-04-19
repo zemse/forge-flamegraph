@@ -97,7 +97,7 @@ impl RcRefCellFunctionCall {
             .expect("source code should be of contract");
         let top_call = Rc::new(RefCell::new(FunctionCall {
             title: format!("{contract_name}.fallback"),
-            name: contract_name,
+            name: format!("{contract_name}.fallback"),
             gas_start: 0,
             gas_end: None,
             color: String::new(),
@@ -148,7 +148,7 @@ impl RcRefCellFunctionCall {
                 if let Some(contract_name) = step_next.get_contract_name() {
                     let new_call = Rc::new(RefCell::new(FunctionCall {
                         title: format!("{contract_name}.fallback"),
-                        name: contract_name,
+                        name: format!("{contract_name}.fallback"),
                         gas_start: step.current_step.total_gas_used,
                         gas_end: None,
                         color: String::new(),
@@ -186,27 +186,27 @@ impl RcRefCellFunctionCall {
 
             // internal function call ends
             if step.source_element.jump == Jump::Out {
-                let name = step.get_name().unwrap_or("unknown".to_string());
+                // let name = step.get_name().unwrap_or("unknown".to_string());
                 // let step_next = &steps[i + 1];
                 // if !step_next.source_code.contains(&name) {
                 //     continue;
                 // }
 
-                let ptr_weak = Rc::downgrade(&ptr);
-                let return_dummy_call = Rc::new(RefCell::new(FunctionCall {
-                    title: format!(
-                        "return {name} pc: {}, total_gas_used: {}",
-                        step.current_step.pc, step.current_step.total_gas_used
-                    ),
-                    name: "return".to_string(),
-                    gas_start: 0,
-                    gas_end: Some(0),
-                    is_external_call: false,
-                    color: String::new(),
-                    calls: vec![],
-                    parent: Some(ptr_weak),
-                }));
-                ptr.borrow_mut().calls.push(return_dummy_call);
+                // let ptr_weak = Rc::downgrade(&ptr);
+                // let return_dummy_call = Rc::new(RefCell::new(FunctionCall {
+                //     title: format!(
+                //         "return {name} pc: {}, total_gas_used: {}",
+                //         step.current_step.pc, step.current_step.total_gas_used
+                //     ),
+                //     name: "return".to_string(),
+                //     gas_start: 0,
+                //     gas_end: Some(0),
+                //     is_external_call: false,
+                //     color: String::new(),
+                //     calls: vec![],
+                //     parent: Some(ptr_weak),
+                // }));
+                // ptr.borrow_mut().calls.push(return_dummy_call);
                 let parent_ptr = if let Some(ptr) = ptr.borrow_mut().parent.as_ref() {
                     Weak::clone(ptr)
                 } else {
@@ -219,43 +219,59 @@ impl RcRefCellFunctionCall {
                 ptr = parent_ptr.upgrade().unwrap();
             }
 
-            // external call ends
             if step.current_step.instruction == 0xF3
                 || step.current_step.instruction == 0xFD
                 || step.current_step.instruction == 0x00
             {
-                loop {
-                    let parent_ptr = Weak::clone(ptr.borrow_mut().parent.as_ref().unwrap());
+                let parent_ptr = if let Some(ptr) = ptr.borrow_mut().parent.as_ref() {
+                    Weak::clone(ptr)
+                } else {
+                    println!("no parent found for {}", step.source_code);
+                    break;
+                };
 
-                    let step_next = &steps[i + 1];
-                    ptr.borrow_mut().gas_end = Some(step_next.current_step.total_gas_used);
+                ptr.borrow_mut().gas_end = Some(step.current_step.total_gas_used);
 
-                    let prev_ptr = ptr;
-                    ptr = parent_ptr.upgrade().unwrap();
-
-                    if prev_ptr.borrow_mut().is_external_call {
-                        let ptr_weak = Rc::downgrade(&ptr);
-                        let name = step
-                            .get_name()
-                            .unwrap_or_else(|| step.get_source_code_stripped(30));
-                        let return_dummy_call = Rc::new(RefCell::new(FunctionCall {
-                            title: format!(
-                                "returncall {name} pc: {}, total_gas_used: {}",
-                                step.current_step.pc, step.current_step.total_gas_used
-                            ),
-                            name: "return".to_string(),
-                            gas_start: 0,
-                            gas_end: Some(0),
-                            is_external_call: false,
-                            color: String::new(),
-                            calls: vec![],
-                            parent: Some(ptr_weak),
-                        }));
-                        ptr.borrow_mut().calls.push(return_dummy_call);
-                        break;
-                    }
-                }
+                ptr = parent_ptr.upgrade().unwrap();
             }
+
+            // // external call ends
+            // if step.current_step.instruction == 0xF3
+            //     || step.current_step.instruction == 0xFD
+            //     || step.current_step.instruction == 0x00
+            // {
+            //     loop {
+            //         let parent_ptr = Weak::clone(ptr.borrow_mut().parent.as_ref().unwrap());
+
+            //         let step_next = &steps[i + 1];
+            //         ptr.borrow_mut().gas_end = Some(step_next.current_step.total_gas_used);
+
+            //         // let prev_ptr = ptr;
+            //         ptr = parent_ptr.upgrade().unwrap();
+
+            //         // if prev_ptr.borrow_mut().is_external_call {
+            //         //     let ptr_weak = Rc::downgrade(&ptr);
+            //         //     let name = step
+            //         //         .get_name()
+            //         //         .unwrap_or_else(|| step.get_source_code_stripped(30));
+            //         //     let return_dummy_call = Rc::new(RefCell::new(FunctionCall {
+            //         //         title: format!(
+            //         //             "returncall {name} pc: {}, total_gas_used: {}",
+            //         //             step.current_step.pc, step.current_step.total_gas_used
+            //         //         ),
+            //         //         name: "return".to_string(),
+            //         //         gas_start: 0,
+            //         //         gas_end: Some(0),
+            //         //         is_external_call: false,
+            //         //         color: String::new(),
+            //         //         calls: vec![],
+            //         //         parent: Some(ptr_weak),
+            //         //     }));
+            //         //     ptr.borrow_mut().calls.push(return_dummy_call);
+            //         //     break;
+            //         // }
+            //     }
+            // }
         }
 
         RcRefCellFunctionCall(top_call)

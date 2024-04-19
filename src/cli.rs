@@ -1,6 +1,5 @@
 // use super::watch::WatchArgs;
 
-use super::backends::debug::{debugger::Debugger, step::VecStep};
 use super::{forge::install, forge::test::ProjectPathsAwareFilter};
 use clap::Parser;
 use eyre::Result;
@@ -66,7 +65,7 @@ pub struct FlamegraphArgs {
     test_function: Option<Regex>,
 
     #[arg(long, short, help_heading = "Internal functions")]
-    internal: bool,
+    debugtrace: bool,
 
     #[arg(long, short, help_heading = "Output format")]
     json: bool,
@@ -224,7 +223,7 @@ impl FlamegraphArgs {
         let env = evm_opts.evm_env().await?;
 
         // Prepare the test builder
-        let should_debug = self.internal;
+        let should_debug = self.debugtrace;
 
         // Clone the output only if we actually need it later for the debugger.
         let output_clone = should_debug.then(|| output.clone());
@@ -274,9 +273,12 @@ impl FlamegraphArgs {
 
         let keys: Vec<String> = suite_result.test_results.keys().cloned().collect();
         assert_eq!(keys.len(), 1, "number of tests ran must be 1");
-        let test_name = &keys[0];
+        let mut test_name = keys[0].clone();
+        if test_name.ends_with("()") {
+            test_name.truncate(test_name.len() - 2);
+        }
 
-        if should_debug {
+        let mut flamegraph = if should_debug {
             // Get first non-empty suite result. We will have only one such entry
 
             let sources = ContractSources::from_project_output(
@@ -285,34 +287,36 @@ impl FlamegraphArgs {
                 &suite_result.libraries,
             )?;
 
-            let mut builder = Debugger::builder()
-                .debug_arenas(test_result.debug.as_slice())
-                .sources(sources)
-                .breakpoints(test_result.breakpoints.clone());
-            // identified contracts are set here
-            if let Some(decoder) = &outcome.decoder {
-                builder = builder.decoder(decoder);
-            }
-            let mut debugger = builder.build();
+            Flamegraph::from_debug_trace(sources, test_result, outcome.decoder.as_ref().unwrap())?
 
-            let mut steps = VecStep::default();
-            if self.steps {
-                println!("steps {:#?}", steps);
-            }
+            // let mut builder = Debugger::builder()
+            //     .debug_arenas(test_result.debug.as_slice())
+            //     .sources(sources)
+            //     .breakpoints(test_result.breakpoints.clone());
+            // // identified contracts are set here
+            // if let Some(decoder) = &outcome.decoder {
+            //     builder = builder.decoder(decoder);
+            // }
+            // let mut debugger = builder.build();
 
-            // debugger.run_silent()?;
-            debugger.try_run(&mut steps)?;
+            // let mut steps = VecStep::default();
+            // if self.steps {
+            //     println!("steps {:#?}", steps);
+            // }
 
-            let top_call = steps.parse();
+            // // debugger.run_silent()?;
+            // debugger.try_run(&mut steps)?;
 
-            if self.json {
-                println!(
-                    "\n\nflamegraph data: {}\n\n",
-                    serde_json::to_string_pretty(&top_call).unwrap()
-                );
-            } else {
-                println!("\n\nflamegraph data: {:?}\n\n", top_call);
-            }
+            // let top_call = steps.parse();
+
+            // if self.json {
+            //     println!(
+            //         "\n\nflamegraph data: {}\n\n",
+            //         serde_json::to_string_pretty(&top_call).unwrap()
+            //     );
+            // } else {
+            //     println!("\n\nflamegraph data: {:?}\n\n", top_call);
+            // }
         } else {
             let arena = test_result
                 .traces
@@ -328,9 +332,16 @@ impl FlamegraphArgs {
 
             let nodes = arena.nodes();
             let decoder = outcome.decoder.as_ref().unwrap();
-            let mut flamegraph = Flamegraph::from_call_trace(nodes, decoder).await;
-            flamegraph.generate(format!("flamegraph-{}.svg", test_name));
-        }
+            Flamegraph::from_call_trace(nodes, decoder).await
+        };
+
+        // println!("flamegraph: {:#?}", flamegraph.folded_stack_lines);
+
+        flamegraph.generate(format!(
+            "flamegraph_{}_{}.svg",
+            test_name,
+            if should_debug { "debug" } else { "calltrace" }
+        ));
 
         Ok(outcome)
     }

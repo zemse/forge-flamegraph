@@ -1,4 +1,4 @@
-use std::{fs, path::Path};
+use std::{fs, io::Read, path::Path};
 
 pub use inferno::flamegraph::{self, Options};
 
@@ -13,6 +13,8 @@ impl<'a> Flamegraph<'a> {
             fs::remove_file(&file_name).unwrap();
         }
 
+        self.options.title = file_name.clone();
+
         let file = fs::File::create(&file_name).unwrap();
 
         flamegraph::from_lines(
@@ -21,5 +23,12 @@ impl<'a> Flamegraph<'a> {
             file,
         )
         .unwrap();
+
+        let mut buf = String::new();
+        let mut file = fs::File::open(&file_name).unwrap();
+        file.read_to_string(&mut buf)
+            .expect("failed to read flamegraph file");
+        let buf = buf.replace("samples", "gas");
+        fs::write(&file_name, buf).expect("failed to write flamegraph file");
     }
 }

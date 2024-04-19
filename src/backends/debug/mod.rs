@@ -19,7 +19,7 @@ impl<'a> Flamegraph<'a> {
         test_result: &TestResult,
         decoder: &CallTraceDecoder,
     ) -> eyre::Result<Self> {
-        let mut builder = Debugger::builder()
+        let builder = Debugger::builder()
             .debug_arenas(test_result.debug.as_slice())
             .sources(sources)
             .breakpoints(test_result.breakpoints.clone())
@@ -35,10 +35,14 @@ impl<'a> Flamegraph<'a> {
 
         let top_call = steps.parse();
 
-        let flamegraph = Self {
+        let mut flamegraph = Self {
             folded_stack_lines: vec![],
             options: flamegraph::Options::default(),
         };
+        flamegraph.options.flame_chart = true;
+        flamegraph.handle_call(&top_call.0, None);
+
+        flamegraph.folded_stack_lines.reverse();
 
         Ok(flamegraph)
     }
@@ -48,21 +52,35 @@ impl<'a> Flamegraph<'a> {
         call: &Rc<RefCell<FunctionCall>>,
         folded_stack_line_prepend: Option<&String>,
     ) -> i64 {
-        let title = &call.borrow().title;
+        let name = &call.borrow().name;
         let children = &call.borrow().calls;
 
         let folded_stack_line = folded_stack_line_prepend
-            .map(|prepend| format!("{};{}", prepend, title))
-            .unwrap_or_else(|| title.clone());
+            .map(|prepend| format!("{};{}", prepend, name))
+            .unwrap_or_else(|| name.clone());
+
+        // we still have to add gass here
+        let idx = self.folded_stack_lines.len();
+        self.folded_stack_lines.push(folded_stack_line.clone());
 
         let mut child_gas = 0;
         for child in children {
             child_gas += self.handle_call(child, Some(&folded_stack_line));
         }
 
-        // let gas_used = call.borrow().gas_start - call.borrow().gas_end;
-        // self.folded_stack_lines.push([folded_stack_line,call.borrow().value.to_string()].join(" "));]);
+        let gas_start = call.borrow().gas_start;
+        let gas_end = call.borrow().gas_end;
+        let gas_used = gas_end
+            .map(|gas_end| (gas_end as i64) - (gas_start as i64))
+            .unwrap_or(0);
+        let mut gas_here = gas_used - child_gas;
+        if gas_here < 0 {
+            // because some issues with flamegraph
+            gas_here = 0;
+        }
 
-        0
+        self.folded_stack_lines[idx] = format!("{} {}", self.folded_stack_lines[idx], gas_here);
+
+        gas_used
     }
 }
