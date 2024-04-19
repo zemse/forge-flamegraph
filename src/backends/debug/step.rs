@@ -2,10 +2,7 @@ use forge::debug::DebugStep;
 use foundry_compilers::sourcemap::SourceElement;
 use revm::interpreter::OpCode;
 
-use super::{
-    function_call::RcRefCellFunctionCall,
-    utils::{get_after_dot, get_next},
-};
+use super::utils::{get_after_dot, get_next};
 
 pub struct Step {
     pub source_element: SourceElement,
@@ -75,10 +72,6 @@ impl Step {
 pub struct VecStep(pub Vec<Step>);
 
 impl VecStep {
-    pub fn parse(&self) -> RcRefCellFunctionCall {
-        RcRefCellFunctionCall::parse_steps(self)
-    }
-
     pub fn push(&mut self, step: Step) {
         self.0.push(step);
     }
