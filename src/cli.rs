@@ -18,6 +18,7 @@ use foundry_common::{
     compile::{ContractSources, ProjectCompiler},
     evm::EvmArgs,
     shell,
+    term::Spinner,
 };
 use foundry_compilers::{artifacts::output_selection::OutputSelection, utils::source_files_iter};
 use foundry_config::{
@@ -275,6 +276,10 @@ impl FlamegraphArgs {
             test_name.truncate(test_name.len() - 2);
         }
 
+        println!();
+        let mut spinner = Spinner::new("Flamingraph...");
+        spinner.tick();
+
         let mut flamegraph = if should_debug {
             // Get first non-empty suite result. We will have only one such entry
 
@@ -341,6 +346,9 @@ impl FlamegraphArgs {
         );
 
         flamegraph.generate(&file_name);
+
+        println!("\nFlamegraph generated!");
+
         if self.open {
             open::that(file_name)?;
         }
