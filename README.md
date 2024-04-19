@@ -13,7 +13,7 @@ cd ../..
 
 ## Usage
 
-### calltrace backend
+### `calltrace`
 
 this generates a flamegraph with the call trace. suitable for huge and complex contracts like defi protocols.
 
@@ -21,7 +21,7 @@ this generates a flamegraph with the call trace. suitable for huge and complex c
 forge-flamegraph -t NAME_OF_TEST_FUNCTION
 ```
 
-### `debugtrace` backend
+### `debugtrace`
 
 this generates a flamegraph with internal functions and also displays SLOADs and SSTOREs. suitable for libraries.
 
