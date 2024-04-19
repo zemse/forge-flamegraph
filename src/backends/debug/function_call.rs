@@ -1,4 +1,4 @@
-use crate::{step::VecStep, utils::get_next};
+use super::{step::VecStep, utils::get_next};
 use foundry_compilers::sourcemap::Jump;
 use serde::Serialize;
 
@@ -18,7 +18,7 @@ pub struct FunctionCall {
 }
 
 #[derive(Clone, Serialize, Debug)]
-pub struct RcRefCellFunctionCall(Rc<RefCell<FunctionCall>>);
+pub struct RcRefCellFunctionCall(pub Rc<RefCell<FunctionCall>>);
 
 use std::{
     cell::RefCell,
@@ -84,6 +84,7 @@ fn print_call(call: &Rc<RefCell<FunctionCall>>, depth: usize, f: &mut std::fmt::
 // }
 // }
 
+// TODO create a parser file and move this logic there
 impl RcRefCellFunctionCall {
     pub fn parse_steps(steps: &VecStep) -> RcRefCellFunctionCall {
         let steps = &steps.0;

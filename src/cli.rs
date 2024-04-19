@@ -1,7 +1,7 @@
 // use super::watch::WatchArgs;
 
+use super::backends::debug::{debugger::Debugger, step::VecStep};
 use super::{forge::install, forge::test::ProjectPathsAwareFilter};
-use crate::{debugger::Debugger, flamegraph::Flamegraph, step::VecStep};
 use clap::Parser;
 use eyre::Result;
 use forge::{
@@ -40,6 +40,7 @@ use tracing::trace;
 // use watchexec::config::{InitConfig, RuntimeConfig};
 use yansi::Paint;
 
+use crate::flamegraph::Flamegraph;
 pub use crate::forge::test::FilterArgs;
 use forge::traces::render_trace_arena;
 
@@ -327,7 +328,7 @@ impl FlamegraphArgs {
 
             let nodes = arena.nodes();
             let decoder = outcome.decoder.as_ref().unwrap();
-            let flamegraph = Flamegraph::from_call_trace(nodes, decoder).await;
+            let mut flamegraph = Flamegraph::from_call_trace(nodes, decoder).await;
             flamegraph.generate(format!("flamegraph-{}.svg", test_name));
         }
 

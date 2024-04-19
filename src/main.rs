@@ -4,12 +4,9 @@ use eyre::Result;
 use foundry_cli::{self, handler};
 use foundry_evm::inspectors::cheatcodes::{set_execution_context, ForgeContext};
 
+pub mod backends;
 pub mod cli;
-pub mod debugger;
 pub mod flamegraph;
-pub mod function_call;
-pub mod step;
-pub mod utils;
 
 pub mod forge;
 

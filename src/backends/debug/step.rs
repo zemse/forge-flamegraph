@@ -2,7 +2,7 @@ use forge::debug::DebugStep;
 use foundry_compilers::sourcemap::SourceElement;
 use revm::interpreter::OpCode;
 
-use crate::{
+use super::{
     function_call::RcRefCellFunctionCall,
     utils::{get_after_dot, get_next},
 };

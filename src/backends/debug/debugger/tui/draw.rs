@@ -1,5 +1,5 @@
+use super::super::super::step::{Step, VecStep};
 use super::context::DebuggerContext;
-use crate::step::{Step, VecStep};
 use foundry_compilers::sourcemap::SourceElement;
 use revm_inspectors::tracing::types::CallKind;
 use std::io;
