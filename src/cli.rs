@@ -1,11 +1,10 @@
 // use super::watch::WatchArgs;
 
 use super::{forge::install, forge::test::ProjectPathsAwareFilter};
-use crate::{debugger::Debugger, step::VecStep};
+use crate::{debugger::Debugger, flamegraph::Flamegraph, step::VecStep};
 use clap::Parser;
 use eyre::Result;
 use forge::{
-    decode::decode_console_logs,
     inspectors::CheatsConfig,
     multi_runner::matches_contract,
     result::{SuiteResult, TestOutcome, TestStatus},
@@ -65,7 +64,9 @@ pub struct FlamegraphArgs {
     #[arg(long, short = 't', value_name = "TEST_FUNCTION")]
     test_function: Option<Regex>,
 
-    // /// Output test results in JSON format.
+    #[arg(long, short, help_heading = "Internal functions")]
+    internal: bool,
+
     #[arg(long, short, help_heading = "Output format")]
     json: bool,
 
@@ -166,7 +167,7 @@ impl FlamegraphArgs {
     /// Returns the test results for all matching tests.
     pub async fn execute_tests(self) -> Result<TestOutcome> {
         // Merge all configs
-        let (mut config, evm_opts) = self.load_config_and_evm_opts_emit_warnings()?;
+        let (mut config, mut evm_opts) = self.load_config_and_evm_opts_emit_warnings()?;
 
         // Explicitly enable isolation for gas reports for more correct gas accounting
         // if self.gas_report {
@@ -212,7 +213,9 @@ impl FlamegraphArgs {
             .build(&output, project_root)?;
 
         // Determine print verbosity and executor verbosity
-        let verbosity = evm_opts.verbosity;
+        let verbosity = 3;
+        evm_opts.verbosity = verbosity;
+        // let verbosity = evm_opts.verbosity;
         // if self.gas_report && evm_opts.verbosity < 3 {
         //     evm_opts.verbosity = 3;
         // }
@@ -220,7 +223,7 @@ impl FlamegraphArgs {
         let env = evm_opts.evm_env().await?;
 
         // Prepare the test builder
-        let should_debug = self.test_function.is_some();
+        let should_debug = self.internal;
 
         // Clone the output only if we actually need it later for the debugger.
         let output_clone = should_debug.then(|| output.clone());
@@ -259,29 +262,28 @@ impl FlamegraphArgs {
 
         // flamegraph inputs: debug, sources
 
+        let Some((suite_result, test_result)) = outcome
+            .results
+            .iter()
+            .find(|(_, r)| !r.test_results.is_empty())
+            .map(|(_, r)| (r, r.test_results.values().next().unwrap()))
+        else {
+            return Err(eyre::eyre!("no tests were executed"));
+        };
+
+        let keys: Vec<String> = suite_result.test_results.keys().cloned().collect();
+        assert_eq!(keys.len(), 1, "number of tests ran must be 1");
+        let test_name = &keys[0];
+
         if should_debug {
             // Get first non-empty suite result. We will have only one such entry
-            let Some((suite_result, test_result)) = outcome
-                .results
-                .iter()
-                .find(|(_, r)| !r.test_results.is_empty())
-                .map(|(_, r)| (r, r.test_results.values().next().unwrap()))
-            else {
-                return Err(eyre::eyre!("no tests were executed"));
-            };
-
-            // println!("debug {:?}", test_result.debug);
 
             let sources = ContractSources::from_project_output(
                 output_clone.as_ref().unwrap(),
                 project.root(),
                 &suite_result.libraries,
             )?;
-            // println!("sources {:?}", sources.ids_by_name);
-            // println!("test_result.breakpoints {:?}", test_result.breakpoints);
 
-            // println!("pc_ic_maps {:?}", pc_ic_maps);
-            // Run the debugger.
             let mut builder = Debugger::builder()
                 .debug_arenas(test_result.debug.as_slice())
                 .sources(sources)
@@ -293,14 +295,14 @@ impl FlamegraphArgs {
             let mut debugger = builder.build();
 
             let mut steps = VecStep::default();
+            if self.steps {
+                println!("steps {:#?}", steps);
+            }
+
             // debugger.run_silent()?;
             debugger.try_run(&mut steps)?;
 
             let top_call = steps.parse();
-
-            if self.steps {
-                println!("steps {:#?}", steps);
-            }
 
             if self.json {
                 println!(
@@ -310,6 +312,23 @@ impl FlamegraphArgs {
             } else {
                 println!("\n\nflamegraph data: {:?}\n\n", top_call);
             }
+        } else {
+            let arena = test_result
+                .traces
+                .iter()
+                .find_map(|(kind, arena)| {
+                    if *kind == TraceKind::Execution {
+                        Some(arena)
+                    } else {
+                        None
+                    }
+                })
+                .unwrap();
+
+            let nodes = arena.nodes();
+            let decoder = outcome.decoder.as_ref().unwrap();
+            let flamegraph = Flamegraph::from_call_trace(nodes, decoder).await;
+            flamegraph.generate(format!("flamegraph-{}.svg", test_name));
         }
 
         Ok(outcome)
@@ -388,17 +407,17 @@ impl FlamegraphArgs {
                 shell::println(result.short_result(name))?;
 
                 // We only display logs at level 2 and above
-                if verbosity >= 2 {
-                    // We only decode logs from Hardhat and DS-style console events
-                    let console_logs = decode_console_logs(&result.logs);
-                    if !console_logs.is_empty() {
-                        println!("Logs:");
-                        for log in console_logs {
-                            println!("  {log}");
-                        }
-                        println!();
-                    }
-                }
+                // if verbosity >= 2 {
+                //     // We only decode logs from Hardhat and DS-style console events
+                //     let console_logs = decode_console_logs(&result.logs);
+                //     if !console_logs.is_empty() {
+                //         println!("Logs:");
+                //         for log in console_logs {
+                //             println!("  {log}");
+                //         }
+                //         println!();
+                //     }
+                // }
 
                 // We shouldn't break out of the outer loop directly here so that we finish
                 // processing the remaining tests and print the suite summary.
@@ -444,16 +463,16 @@ impl FlamegraphArgs {
                     }
                 }
 
-                if !decoded_traces.is_empty() {
-                    shell::println("Traces:")?;
-                    for trace in &decoded_traces {
-                        shell::println(trace)?;
-                    }
-                }
+                // if !decoded_traces.is_empty() {
+                //     shell::println("Traces:")?;
+                //     for trace in &decoded_traces {
+                //         shell::println(trace)?;
+                //     }
+                // }
             }
 
             // Print suite summary.
-            shell::println(suite_result.summary())?;
+            // shell::println(suite_result.summary())?;
 
             // Add the suite result to the outcome.
             outcome.results.insert(contract_name, suite_result);

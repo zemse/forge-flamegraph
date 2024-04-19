@@ -3,18 +3,18 @@ use foundry_compilers::sourcemap::Jump;
 use serde::Serialize;
 
 #[derive(Clone, Serialize)]
-struct FunctionCall {
-    title: String,
-    name: String,
-    gas_start: u64,
-    gas_end: Option<u64>,
-    color: String,
+pub struct FunctionCall {
+    pub title: String,
+    pub name: String,
+    pub gas_start: u64,
+    pub gas_end: Option<u64>,
+    pub color: String,
     // might be useful to resync call depth
-    is_external_call: bool,
+    pub is_external_call: bool,
     #[serde(rename = "children")]
-    calls: Vec<Rc<RefCell<FunctionCall>>>,
+    pub calls: Vec<Rc<RefCell<FunctionCall>>>,
     #[serde(skip)]
-    parent: Option<Weak<RefCell<FunctionCall>>>,
+    pub parent: Option<Weak<RefCell<FunctionCall>>>,
 }
 
 #[derive(Clone, Serialize, Debug)]
@@ -53,6 +53,36 @@ fn print_call(call: &Rc<RefCell<FunctionCall>>, depth: usize, f: &mut std::fmt::
         print_call(c, depth + 1, f);
     }
 }
+
+// impl FunctionCall {
+// #[async_recursion]
+// pub async fn from_node(
+//     node: &CallTraceNode,
+//     decoder: &CallTraceDecoder,
+//     nodes: &[CallTraceNode],
+// ) -> FunctionCall {
+//     let decoded = decoder.decode_function(&node.trace).await;
+//     let contract_name = decoded.label.unwrap_or("<unknown>".to_string());
+//     let function_name = decoded.func.unwrap_or_default().signature;
+//     let mut call = FunctionCall {
+//         title: format!("{contract_name}.{function_name}"),
+//         name: format!("{contract_name}.{function_name}"),
+//         gas_start: 0,
+//         gas_end: Some(0),
+//         color: "".to_string(),
+//         is_external_call: true,
+//         calls: vec![],
+//         parent: None,
+//     };
+//     for child_idx in node.children.iter() {
+//         let child_node = &nodes[*child_idx];
+//         let child_call = FunctionCall::from_node(child_node, decoder, nodes).await;
+//         let child_call_ptr = Rc::new(RefCell::new(child_call));
+//         call.calls.push(child_call_ptr);
+//     }
+//     call
+// }
+// }
 
 impl RcRefCellFunctionCall {
     pub fn parse_steps(steps: &VecStep) -> RcRefCellFunctionCall {
