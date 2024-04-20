@@ -37,6 +37,7 @@ impl<'a> Flamegraph<'a> {
             let line = [line.join(";"), gas.to_string()].join(" ");
             folded_stack_lines.push(line);
         }
+        folded_stack_lines.reverse();
         Self {
             folded_stack_lines,
             options: flamegraph::Options::default(),

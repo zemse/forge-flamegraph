@@ -8,12 +8,15 @@ pub struct Flamegraph<'a> {
 }
 
 impl<'a> Flamegraph<'a> {
-    pub fn generate(&mut self, file_name: &String) {
+    pub fn generate(&mut self, file_name: &String, merge_stacks: bool) {
         if Path::new(&file_name).exists() {
             fs::remove_file(file_name).unwrap();
         }
 
         self.options.title = file_name.clone();
+        if !merge_stacks {
+            self.options.flame_chart = true;
+        }
 
         let file = fs::File::create(file_name).unwrap();
 

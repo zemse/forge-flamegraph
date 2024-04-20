@@ -71,6 +71,9 @@ pub struct FlamegraphArgs {
     #[arg(long, short, help_heading = "Open flamegraph in default program")]
     open: bool,
 
+    #[arg(long, short, help_heading = "Merge stacks for flamegraph generation")]
+    merge: bool,
+
     #[command(flatten)]
     evm_opts: EvmArgs,
 
@@ -289,7 +292,12 @@ impl FlamegraphArgs {
                 &suite_result.libraries,
             )?;
 
-            Flamegraph::from_debug_trace(sources, test_result, outcome.decoder.as_ref().unwrap())?
+            Flamegraph::from_debug_trace(
+                sources,
+                test_result,
+                outcome.decoder.as_ref().unwrap(),
+                self.merge,
+            )?
 
             // let mut builder = Debugger::builder()
             //     .debug_arenas(test_result.debug.as_slice())
@@ -345,7 +353,7 @@ impl FlamegraphArgs {
             if should_debug { "debug" } else { "calltrace" }
         );
 
-        flamegraph.generate(&file_name);
+        flamegraph.generate(&file_name, self.merge);
 
         println!("\nFlamegraph generated!");
 

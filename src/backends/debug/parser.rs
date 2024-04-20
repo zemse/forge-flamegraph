@@ -15,6 +15,7 @@ impl<'a> Flamegraph<'a> {
         sources: ContractSources,
         test_result: &TestResult,
         decoder: &CallTraceDecoder,
+        merge_stacks: bool,
     ) -> eyre::Result<Self> {
         let builder = Debugger::builder()
             .debug_arenas(test_result.debug.as_slice())
@@ -28,17 +29,15 @@ impl<'a> Flamegraph<'a> {
         debugger.try_run(&mut steps)?;
 
         // parse the debug steps into a call tree
-        let top_call = parse_steps(&steps);
+        let top_call = parse_steps(&steps, merge_stacks);
 
         // parse the call tree into folded stack lines
         let mut flamegraph = Self {
             folded_stack_lines: vec![],
             options: flamegraph::Options::default(),
         };
-        flamegraph.options.flame_chart = true;
         flamegraph.handle_call(&top_call, None);
         flamegraph.folded_stack_lines.reverse();
-
         Ok(flamegraph)
     }
 
@@ -81,7 +80,7 @@ impl<'a> Flamegraph<'a> {
     }
 }
 
-pub fn parse_steps(steps: &VecStep) -> Rc<RefCell<FunctionCall>> {
+pub fn parse_steps(steps: &VecStep, merge_stacks: bool) -> Rc<RefCell<FunctionCall>> {
     let steps = &steps.0;
     assert_eq!(
         steps[0].current_step.total_gas_used, 0,
@@ -136,7 +135,8 @@ pub fn parse_steps(steps: &VecStep) -> Rc<RefCell<FunctionCall>> {
             ptr = new_call;
         }
 
-        {
+        // if stacks are merged, some ops like DUP1 get shown
+        if !merge_stacks {
             let ptr_weak = Rc::downgrade(&ptr);
             let step_next = &steps.get(i + 1);
             let opcode = OpCode::new(step.current_step.instruction)
