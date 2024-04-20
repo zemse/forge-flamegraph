@@ -1,8 +1,8 @@
 # forge-flamegraph
 
-a foundry plugin that generates interactive flamegraph for a specific test case. currently two backends are supported: calltrace and debugtrace.
+a foundry plugin that generates interactive flamegraph for a test case. currently two backends are supported: calltrace and debugtrace.
 
-c'mon lets forge some flamegraphs!
+lets forge some flamegraphs!
 
 [![flamegraph of poseidon2 hash function](./flamegraph_poseidon_debug.svg)](https://zemse.github.io/forge-flamegraph/flamegraph_poseidon_debug.svg)
 
@@ -11,10 +11,7 @@ above is a debugtrace flamegraph of [poseidon2 hash function](https://github.com
 ## Installation
 
 ```bash
-forge install zemse/forge-flamegraph
-cd lib/forge-flamegraph
-cargo install --path .
-cd ../..
+cargo install --git https://github.com/zemse/forge-flamegraph 
 ```
 
 ## Usage
