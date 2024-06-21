@@ -1,14 +1,9 @@
 use clap::Parser;
-use cli::FlamegraphArgs;
 use eyre::Result;
 use foundry_cli::{self, handler};
 use foundry_evm::inspectors::cheatcodes::{set_execution_context, ForgeContext};
 
-pub mod backends;
-pub mod cli;
-pub mod flamegraph;
-
-pub mod forge;
+use forge_flamegraph::cli::FlamegraphArgs;
 
 fn main() -> Result<()> {
     handler::install();
