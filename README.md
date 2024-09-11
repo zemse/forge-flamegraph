@@ -1,3 +1,5 @@
+> Upstreamed in https://github.com/foundry-rs/foundry/pull/8640
+
 # forge-flamegraph
 
 a foundry plugin that generates interactive flamegraph for a test case. currently two backends are supported: calltrace and debugtrace.
